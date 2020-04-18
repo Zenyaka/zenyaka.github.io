@@ -2,6 +2,7 @@
 
 .posts {
   margin: 0 auto;
+  overflow: auto;
 }
 
 .post {
@@ -72,6 +73,10 @@
 
   &-content {
     margin-top: 30px;
+
+    a {
+      color: var(--accent)
+    }
   }
 
   &-cover {
