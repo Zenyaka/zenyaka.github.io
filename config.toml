@@ -4,7 +4,7 @@ base_url = "https://zenyaka.github.io"
 theme = "terminimal"
 compile_sass = true
 highlight_code = true
-build_search_index = true 
+build_search_index = true
 
 title = "Rust And The Rest"
 
@@ -24,10 +24,10 @@ menu_items = [
     # see documentation below for more details
     {name = "tags", url = "$BASE_URL/tags"},
     {name = "archive", url = "$BASE_URL/archive"},
-    {name = "about me", url = "$BASE_URL/about"},
+    {name = "about us", url = "$BASE_URL/about"},
 
     # set newtab to true to make the link open in new tab
-    {name = "github", url = "url-to-your-github", newtab = true},
+    # {name = "github", url = "url-to-your-github", newtab = true},
 ]
 
 logo_text = "Rust And The Rest"
