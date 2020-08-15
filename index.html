@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Rust And The Rest</title>
+    
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="robots" content="noodp"/>
+
+    <link rel="stylesheet" href="https://zenyaka.dev/style.css">
+    <link rel="stylesheet" href="https://zenyaka.dev/color/blue.css">
+
+    <link rel="stylesheet" href="https://zenyaka.dev/font-hack-subset.css">
+
+    </head>
+
+<body class="">
+<div class="container">
+    
+    <header class="header">
+        <div class="header__inner">
+            <div class="header__logo">
+                    
+                <a href="https://zenyaka.dev" style="text-decoration: none;">
+                    <div class="logo">
+                            Rust And The Rest
+                        </div>
+                </a>
+            </div>
+        </div>
+
+        <nav class="menu">
+            <ul class="menu__inner">
+                
+                <li class="active"><a href="https://zenyaka.dev">blog</a></li>
+            
+                <li><a href="https://zenyaka.dev/tags">tags</a></li>
+            
+                <li><a href="https://zenyaka.dev/archive">archive</a></li>
+            
+                <li><a href="https://zenyaka.dev/about">about us</a></li>
+            </ul>
+        </nav>
+    
+    </header>
+    
+
+    <div class="content">
+        
+        <div class="posts">
+                <div class="post on-list">
+                    
+    <h1 class="post-title"><a href="https://zenyaka.dev/odbc-rs-multithreaded-async/">Getting odbc-rs to work in threaded, async-land</a></h1>
+    <div class="post-meta-inline">
+        
+    <span class="post-date">
+            2020-05-07
+        </span>
+
+    </div>
+
+    
+        <span class="post-tags-inline">
+                :: tags:&nbsp;
+                <a class="post-tag" href="https://zenyaka.dev/tags/rust/">#rust</a></span>
+    
+
+                    
+        <div class="post-content">
+            <p>If you're one of the lucky people using Microsoft SQL Server as your backend database, you've no doubt discovered you're mostly alone in Rust.  For a while, there was Tiberius, which worked in some circumstances, but had a set of requirements that not all MSSQL users could match.  Notably, TCP had to be enabled in MSSQL and a valid SSL certificate was required on the server unless you chose to remove encryption for your ENTIRE crate.  Even if your project met those requirements, Tiberius is no longer maintained and <a href="https://github.com/RustSec/advisory-db/issues/261">Rust-Sec has advised against its use</a>.</p>
+<p>That leaves exactly one option: <a href="https://github.com/Koka/odbc-rs">odbc-rs</a>. The crate is just an FFI binding, thus is not thread-safe (i.e. !Send).  This is pretty annoying for obvious reasons if you're attempting to use it from inside the major web crates.  This post focuses on Tokio, though presumably any other runtime will also have an equivalent means of forcing certain code onto a single thread.</p>
+
+        </div>
+        <div>
+            <!-- &#xFE0E; -- force text style - some devices render this as emoji -->
+            <a class="read-more button" href="https://zenyaka.dev/odbc-rs-multithreaded-async/">
+                <span class="button__text">Read more</span>&nbsp;
+                <span class="button__icon">&#8617;&#xFE0E;</span>
+            </a>
+        </div>
+    
+
+                </div>
+            <div class="pagination">
+                <div class="pagination__buttons"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    
+    <footer class="footer">
+        <div class="footer__inner">
+                <div class="copyright">
+                        <span>© 
+    2020
+ Powered by <a href="https://www.getzola.org/">Zola</a></span>
+                    <span class="copyright-theme">
+                        <span class="copyright-theme-sep">:: </span>
+                        Theme: <a href="https://github.com/pawroman/zola-theme-terminimal/">Terminimal</a> by pawroman
+                    </span>
+                </div>
+            </div>
+    </footer>
+    
+
+</div>
+</body>
+
+</html>

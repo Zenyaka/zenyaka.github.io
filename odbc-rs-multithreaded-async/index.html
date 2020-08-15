@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Rust And The Rest</title>
+    
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="robots" content="noodp"/>
+
+    <link rel="stylesheet" href="https://zenyaka.dev/style.css">
+    <link rel="stylesheet" href="https://zenyaka.dev/color/blue.css">
+
+    <link rel="stylesheet" href="https://zenyaka.dev/font-hack-subset.css">
+
+    </head>
+
+<body class="">
+<div class="container">
+    
+    <header class="header">
+        <div class="header__inner">
+            <div class="header__logo">
+                    
+                <a href="https://zenyaka.dev" style="text-decoration: none;">
+                    <div class="logo">
+                            Rust And The Rest
+                        </div>
+                </a>
+            </div>
+        </div>
+
+        <nav class="menu">
+            <ul class="menu__inner">
+                
+                <li class="active"><a href="https://zenyaka.dev">blog</a></li>
+            
+                <li><a href="https://zenyaka.dev/tags">tags</a></li>
+            
+                <li><a href="https://zenyaka.dev/archive">archive</a></li>
+            
+                <li><a href="https://zenyaka.dev/about">about us</a></li>
+            </ul>
+        </nav>
+    
+    </header>
+    
+
+    <div class="content">
+        
+    <div class="post">
+        
+    <h1 class="post-title"><a href="https://zenyaka.dev/odbc-rs-multithreaded-async/">Getting odbc-rs to work in threaded, async-land</a></h1>
+    <div class="post-meta-inline">
+        
+    <span class="post-date">
+            2020-05-07
+        </span>
+
+    </div>
+
+    
+        <span class="post-tags-inline">
+                :: tags:&nbsp;
+                <a class="post-tag" href="https://zenyaka.dev/tags/rust/">#rust</a></span>
+    
+
+        
+        <div class="post-content">
+            <p>If you're one of the lucky people using Microsoft SQL Server as your backend database, you've no doubt discovered you're mostly alone in Rust.  For a while, there was Tiberius, which worked in some circumstances, but had a set of requirements that not all MSSQL users could match.  Notably, TCP had to be enabled in MSSQL and a valid SSL certificate was required on the server unless you chose to remove encryption for your ENTIRE crate.  Even if your project met those requirements, Tiberius is no longer maintained and <a href="https://github.com/RustSec/advisory-db/issues/261">Rust-Sec has advised against its use</a>.</p>
+<p>That leaves exactly one option: <a href="https://github.com/Koka/odbc-rs">odbc-rs</a>. The crate is just an FFI binding, thus is not thread-safe (i.e. !Send).  This is pretty annoying for obvious reasons if you're attempting to use it from inside the major web crates.  This post focuses on Tokio, though presumably any other runtime will also have an equivalent means of forcing certain code onto a single thread.</p>
+<p id="zola-continue-reading"><a name="continue-reading"></a></p>
+<p>For Tokio, you have to get the async executor to constrain odbc-rs to a single thread and have it communicate with the rest of your application using methods such as IPC channels.  This adds a bit of complexity and boilerplate, but does allow you to make use of a single environment/connection from multiple threads.</p>
+<p>In the tokio ecosystem, you'd constrain it to a single thread with <a href="https://docs.rs/tokio/0.2.18/tokio/task/struct.LocalSet.html">tokio::task::LocalSet</a>, and use <a href="https://docs.rs/tokio/0.2.18/tokio/sync/mpsc/fn.channel.html">tokio::sync::mpsc</a> (or any other async channels) to send data in and out.</p>
+<pre style="background-color:#2b303b;">
+<span style="color:#b48ead;">pub enum </span><span style="color:#c0c5ce;">SQLQueryChannelMsg {
+    Query(String),
+    Result(Vec&lt;String&gt;),
+}
+
+#[</span><span style="color:#bf616a;">tokio</span><span style="color:#c0c5ce;">::</span><span style="color:#bf616a;">main</span><span style="color:#c0c5ce;">]
+async </span><span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">main</span><span style="color:#c0c5ce;">() {
+    </span><span style="color:#65737e;">// Dual channels for the query and result
+    </span><span style="color:#b48ead;">let </span><span style="color:#c0c5ce;">(sendSQL, recvSQL) = mpsc::channel(</span><span style="color:#d08770;">5</span><span style="color:#c0c5ce;">);
+    </span><span style="color:#b48ead;">let </span><span style="color:#c0c5ce;">(sendQueryResults, recvQueryResults) = mpsc::channel(</span><span style="color:#d08770;">5</span><span style="color:#c0c5ce;">);
+
+    </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> rc = Arc::new(Mutex::new(recvQueryResults));
+
+    </span><span style="color:#65737e;">// Spawn a tokio thread and run the web server there
+    </span><span style="color:#c0c5ce;">tokio::task::spawn(
+        warp::serve(RoutesBuilder::build(sendSQL.</span><span style="color:#96b5b4;">clone</span><span style="color:#c0c5ce;">(),rc.</span><span style="color:#96b5b4;">clone</span><span style="color:#c0c5ce;">())
+    ).</span><span style="color:#96b5b4;">run</span><span style="color:#c0c5ce;">(([</span><span style="color:#d08770;">127</span><span style="color:#c0c5ce;">, </span><span style="color:#d08770;">0</span><span style="color:#c0c5ce;">, </span><span style="color:#d08770;">0</span><span style="color:#c0c5ce;">, </span><span style="color:#d08770;">1</span><span style="color:#c0c5ce;">], </span><span style="color:#d08770;">8000</span><span style="color:#c0c5ce;">)));
+
+    </span><span style="color:#65737e;">// Run the local task set for mssql queries that require !Send futures.
+    // This is going to block the thread until the local task is done
+    </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> local = task::LocalSet::new();
+    local
+        .</span><span style="color:#96b5b4;">run_until</span><span style="color:#c0c5ce;">(async </span><span style="color:#b48ead;">move </span><span style="color:#c0c5ce;">{
+            </span><span style="color:#65737e;">// `spawn_local` ensures that the future is spawned on the local task set.
+            </span><span style="color:#c0c5ce;">task::spawn_local(MssqlManager::run(recvSQL, sendQueryResults))
+                .await
+                .</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">();
+        })
+        .await;
+}
+</span><span style="color:#b48ead;">pub struct </span><span style="color:#c0c5ce;">MssqlManager {}
+
+</span><span style="color:#b48ead;">impl </span><span style="color:#c0c5ce;">MssqlManager {
+    </span><span style="color:#b48ead;">pub</span><span style="color:#c0c5ce;"> async </span><span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">run</span><span style="color:#c0c5ce;">(
+        </span><span style="color:#b48ead;">mut </span><span style="color:#bf616a;">recvSQL</span><span style="color:#c0c5ce;">: Receiver&lt;SQLQueryChannelMsg&gt;,
+        </span><span style="color:#b48ead;">mut </span><span style="color:#bf616a;">sendQueryResults</span><span style="color:#c0c5ce;">: Sender&lt;SQLQueryChannelMsg&gt;,
+    ) {
+        </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> conn_string = </span><span style="color:#96b5b4;">get_conn_string</span><span style="color:#c0c5ce;">();
+
+        </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> env = </span><span style="color:#96b5b4;">create_environment_v3</span><span style="color:#c0c5ce;">().</span><span style="color:#96b5b4;">map_err</span><span style="color:#c0c5ce;">(|</span><span style="color:#bf616a;">e</span><span style="color:#c0c5ce;">| e.</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">()).</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">();
+        </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> conn = env.</span><span style="color:#96b5b4;">connect_with_connection_string</span><span style="color:#c0c5ce;">(&amp;conn_string).</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">();
+
+        </span><span style="color:#b48ead;">loop </span><span style="color:#c0c5ce;">{
+            </span><span style="color:#65737e;">// Listening for queries
+            </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> query = recvSQL.</span><span style="color:#96b5b4;">recv</span><span style="color:#c0c5ce;">().await;
+
+            </span><span style="color:#b48ead;">if let </span><span style="color:#c0c5ce;">Some(SQLQueryChannelMsg::Query(q)) = query {
+                info!(&quot;</span><span style="color:#a3be8c;">Received query: {}</span><span style="color:#c0c5ce;">&quot;, q);
+
+                </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> stmt = Statement::with_parent(&amp;conn).</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">();
+                </span><span style="color:#b48ead;">match</span><span style="color:#c0c5ce;"> stmt.</span><span style="color:#96b5b4;">exec_direct</span><span style="color:#c0c5ce;">(&amp;q).</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">() {
+                    Data(</span><span style="color:#b48ead;">mut</span><span style="color:#c0c5ce;"> stmt) =&gt; {
+                        </span><span style="color:#b48ead;">let mut</span><span style="color:#c0c5ce;"> results: Vec&lt;String&gt; = Vec::new();
+
+                        </span><span style="color:#b48ead;">let</span><span style="color:#c0c5ce;"> cols = stmt.</span><span style="color:#96b5b4;">num_result_cols</span><span style="color:#c0c5ce;">().</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">();
+                        </span><span style="color:#b48ead;">while let </span><span style="color:#c0c5ce;">Some(</span><span style="color:#b48ead;">mut</span><span style="color:#c0c5ce;"> cursor) = stmt.</span><span style="color:#96b5b4;">fetch</span><span style="color:#c0c5ce;">().</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">() {
+                            </span><span style="color:#b48ead;">for</span><span style="color:#c0c5ce;"> i in </span><span style="color:#d08770;">1</span><span style="color:#c0c5ce;">..(cols + </span><span style="color:#d08770;">1</span><span style="color:#c0c5ce;">) {
+                                </span><span style="color:#b48ead;">match</span><span style="color:#c0c5ce;"> cursor.get_data::&lt;&amp;</span><span style="color:#b48ead;">str</span><span style="color:#c0c5ce;">&gt;(i as </span><span style="color:#b48ead;">u16</span><span style="color:#c0c5ce;">).</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">() {
+                                    Some(val) =&gt; {
+                                        </span><span style="color:#65737e;">//print!(&quot; {}&quot;, val)
+</span><span style="color:#c0c5ce;">                                        results.</span><span style="color:#96b5b4;">push</span><span style="color:#c0c5ce;">(val.</span><span style="color:#96b5b4;">to_owned</span><span style="color:#c0c5ce;">());
+                                    }
+                                    None =&gt; print!(&quot;</span><span style="color:#a3be8c;"> NULL</span><span style="color:#c0c5ce;">&quot;),
+                                }
+                            }
+                        }
+
+                        </span><span style="color:#65737e;">// Send back some data
+</span><span style="color:#c0c5ce;">                        sendQueryResults
+                            .</span><span style="color:#96b5b4;">send</span><span style="color:#c0c5ce;">(SQLQueryChannelMsg::Result(results.</span><span style="color:#96b5b4;">clone</span><span style="color:#c0c5ce;">()))
+                            .await
+                            .</span><span style="color:#96b5b4;">ok</span><span style="color:#c0c5ce;">()
+                            .</span><span style="color:#96b5b4;">unwrap</span><span style="color:#c0c5ce;">();
+                    }
+
+                    NoData(_) =&gt; println!(&quot;</span><span style="color:#a3be8c;">Query executed, no data returned</span><span style="color:#c0c5ce;">&quot;),
+                };
+            }
+        }
+    }
+}
+
+</span></pre>
+        </div>
+
+        
+    </div>
+
+    </div>
+
+    
+    <footer class="footer">
+        <div class="footer__inner">
+                <div class="copyright">
+                        <span>© 
+    2020
+ Powered by <a href="https://www.getzola.org/">Zola</a></span>
+                    <span class="copyright-theme">
+                        <span class="copyright-theme-sep">:: </span>
+                        Theme: <a href="https://github.com/pawroman/zola-theme-terminimal/">Terminimal</a> by pawroman
+                    </span>
+                </div>
+            </div>
+    </footer>
+    
+
+</div>
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+    
+        <url>
+            <loc>https%3A//zenyaka.dev/</loc>
+            
+        </url>
+    
+        <url>
+            <loc>https%3A//zenyaka.dev/about/</loc>
+            
+        </url>
+    
+        <url>
+            <loc>https%3A//zenyaka.dev/odbc-rs-multithreaded-async/</loc>
+            
+                <lastmod>2020-05-07</lastmod>
+            
+        </url>
+    
+        <url>
+            <loc>https%3A//zenyaka.dev/page/1/</loc>
+            
+        </url>
+    
+        <url>
+            <loc>https%3A//zenyaka.dev/tags/</loc>
+            
+        </url>
+    
+        <url>
+            <loc>https%3A//zenyaka.dev/tags/rust/</loc>
+            
+        </url>
+    
+</urlset>
