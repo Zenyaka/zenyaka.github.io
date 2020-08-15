@@ -1,5 +1,5 @@
 # The URL the site will be built for
-base_url = "https://zenyaka.github.io"
+base_url = "https://zenyaka.dev"
 
 theme = "terminimal"
 compile_sass = true
