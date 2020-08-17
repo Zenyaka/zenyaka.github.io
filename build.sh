@@ -7,7 +7,7 @@ zola build
 
 mv public/* .
 rm -rf config.toml content sass static themes templaes
-# echo "atsuzaki.com" >> CNAME # Edit and Reenable if we're using a domain in the future
+echo "zenyaka.dev" >> CNAME
 git add -f .
 git commit -m "Build"
 
